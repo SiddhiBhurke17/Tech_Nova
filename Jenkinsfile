@@ -1,49 +1,45 @@
 pipeline {
     agent any
 
-    environment {
-        GIT_REPO_URL = 'https://github.com/SiddhiBhurke17/Tech_Nova'
-    }
-
     stages {
-        stage('Clone Repository') {
+        stage('Clone Repo') {
             steps {
-                echo "Cloning repo from $GIT_REPO_URL"
-                // Automatically uses Jenkins credentials if configured
-                checkout scm
+                echo '🔄 Cloning GitHub Repo...'
+                // This happens automatically if you're using "Pipeline from SCM" in Jenkins config
             }
         }
 
-        stage('Verify HTML File') {
+        stage('Lint HTML/CSS') {
             steps {
-                echo 'Listing HTML files...'
-                sh 'ls -l *.html || echo "No HTML files found!"'
+                echo '🔍 Checking HTML for errors using tidy...'
+                sh '''
+                sudo apt-get update
+                sudo apt-get install -y tidy
+
+                # Validate the HTML file; fail build if errors are found
+                tidy -e index.html
+                '''
             }
         }
 
-        stage('Basic Syntax Check') {
+        stage('Build Docker Image') {
             steps {
-                echo 'Performing basic syntax validation...'
-                sh 'grep -i "<html" index.html && grep -i "</html>" index.html || echo "Check HTML structure"'
+                echo '🐳 Building Docker Image...'
+                sh '''
+                docker build -t technova-site:latest .
+                '''
             }
         }
 
-        stage('Simulate Deployment') {
-            steps {
-                echo 'Simulating deployment...'
-                // In real scenarios, you can copy to a web server or Docker image
-                sh 'mkdir -p build_output && cp index.html build_output/'
-                echo 'Deployed to build_output folder'
-            }
-        }
+        // Optional: Add push to Docker Hub here later
     }
 
     post {
-        success {
-            echo 'Pipeline executed successfully!'
-        }
         failure {
-            echo 'Something went wrong. Investigate the logs.'
+            echo '❌ Pipeline failed — check for HTML errors or Docker issues.'
+        }
+        success {
+            echo '✅ Success — Clean HTML, Docker image built!'
         }
     }
 }
